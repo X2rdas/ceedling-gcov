@@ -1,5 +1,5 @@
-require 'plugin'
-require 'constants'
+require 'ceedling/plugin'
+require 'ceedling/constants'
 
 GCOV_ROOT_NAME         = 'gcov'
 GCOV_TASK_ROOT         = GCOV_ROOT_NAME + ':'
@@ -29,10 +29,11 @@ class Gcov < Plugin
       :collection_defines_test_and_vendor => COLLECTION_DEFINES_TEST_AND_VENDOR + ['CODE_COVERAGE']
       }
     
-    @coverage_template_all = @ceedling[:file_wrapper].read( File.join( PLUGINS_GCOV_PATH, 'template.erb') )
+    @coverage_template_all = @ceedling[:file_wrapper].read( File.join( PLUGINS_GCOV_PATH, '..','assets', 'template.erb') )
   end
 
   def generate_coverage_object_file(source, object)
+
     compile_command = 
       @ceedling[:tool_executor].build_command_line(
         TOOLS_GCOV_COMPILER,
@@ -52,6 +53,7 @@ class Gcov < Plugin
   end
     
   def post_build
+   # puts @ceedling[:task_invoker].to_
     return if (not @ceedling[:task_invoker].invoked?(/^#{GCOV_TASK_ROOT}/))
 
     # test results
@@ -67,11 +69,7 @@ class Gcov < Plugin
       message
     end
     
-    if (@ceedling[:task_invoker].invoked?(/^#{GCOV_TASK_ROOT}(all|delta)/))
-      report_coverage_results_summary(@ceedling[:test_invoker].sources)
-    else
-      report_per_file_coverage_results(@ceedling[:test_invoker].sources)
-    end
+    report_coverage_results_summary(@ceedling[:test_invoker].sources)
   end
 
   def summary
@@ -95,17 +93,12 @@ class Gcov < Plugin
   private ###################################
 
   def report_coverage_results_summary(sources)
-
-  end
-
-  def report_per_file_coverage_results(sources)
     banner = @ceedling[:plugin_reportinator].generate_banner "#{GCOV_ROOT_NAME.upcase}: CODE COVERAGE SUMMARY"
     @ceedling[:streaminator].stdout_puts "\n" + banner
 
     coverage_sources = sources.clone
     coverage_sources.delete_if {|item| item =~ /#{CMOCK_MOCK_PREFIX}.+#{EXTENSION_SOURCE}$/}
     coverage_sources.delete_if {|item| item =~ /#{GCOV_IGNORE_SOURCES.join('|')}#{EXTENSION_SOURCE}$/}
-
     coverage_sources.each do |source|
       basename         = File.basename(source)
       command          = @ceedling[:tool_executor].build_command_line(TOOLS_GCOV_REPORT, basename)
